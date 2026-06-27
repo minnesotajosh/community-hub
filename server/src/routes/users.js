@@ -9,22 +9,22 @@ import { communityFilter, canAccessCommunity } from '../middleware/scope.js';
 const router = Router();
 router.use(authRequired);
 
-// Public-ish profile for a community member: basic info plus the concerns they
-// raised and the forum comments they left, scoped to what the viewer can see.
+// Profiles are visible to any authenticated user, including across communities.
+// Only the role is private (revealed to the user themselves via `isSelf`).
 router.get('/:id/profile', async (req, res) => {
   const target = await User.findById(req.params.id)
     .populate('city', 'name')
     .populate('community', 'name');
   if (!target) return res.status(404).json({ error: 'Not found' });
-  if (!canAccessCommunity(req.user, target.community))
-    return res.status(403).json({ error: 'Forbidden' });
 
   const isSelf = String(target._id) === String(req.user._id);
+  // Pending/denied concerns stay private outside the user's own community:
+  // only the author or that community's staff (or a global admin) see them all.
+  const canSeeAllConcerns = isSelf || isGlobal(req.user) ||
+    (isStaff(req.user) && canAccessCommunity(req.user, target.community));
 
-  // Concerns authored by the target. Members only see another user's
-  // approved/active concerns; staff and the user themselves see all.
   const concernFilter = { author: target._id };
-  if (!isSelf && !isStaff(req.user)) concernFilter.status = { $in: ['approved', 'active'] };
+  if (!canSeeAllConcerns) concernFilter.status = { $in: ['approved', 'active'] };
   const concerns = await Concern.find(concernFilter)
     .select('title status tag createdAt closed')
     .sort({ createdAt: -1 });
@@ -42,7 +42,11 @@ router.get('/:id/profile', async (req, res) => {
   }
   comments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-  res.json({ user: target, concerns, comments, isSelf });
+  // Role is private: only expose it on the user's own profile.
+  const user = target.toJSON();
+  if (!isSelf) delete user.role;
+
+  res.json({ user, concerns, comments, isSelf });
 });
 
 // List users — scoped to community for non-global roles
