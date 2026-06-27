@@ -6,15 +6,17 @@ const router = Router();
 router.use(authRequired);
 
 // List the current user's notifications (newest first) plus the unread count.
+// `limit` caps the page size (default 50 for the dropdown, up to 200).
 router.get('/', async (req, res) => {
   const filter = { recipient: req.user._id };
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 200);
   const [notifications, unread] = await Promise.all([
     Notification.find(filter)
       .populate('actor', 'name role profileImage')
       .populate('concern', 'title')
       .populate('forum', 'title')
       .sort({ createdAt: -1 })
-      .limit(50),
+      .limit(limit),
     Notification.countDocuments({ ...filter, read: false }),
   ]);
   res.json({ notifications, unread });
