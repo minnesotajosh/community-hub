@@ -25,6 +25,18 @@ npm run dev
 ```
 Open http://localhost:5173.
 
+## Run with Docker
+Builds the API and a static (nginx-served) client, with MongoDB, in one stack.
+nginx proxies `/api` to the server, so everything is served from one origin.
+```bash
+cp .env.example .env        # optional — set JWT_SECRET / WEB_PORT
+docker compose up --build   # web on http://localhost:8080
+docker compose run --rm server npm run seed   # load test data (one-time)
+```
+Services: `mongo` (data persisted in the `mongo-data` volume), `server`
+(Node API, internal port 4000), `web` (nginx on host port `WEB_PORT`, default
+8080). Stop with `docker compose down` (add `-v` to also drop the DB volume).
+
 ## Reset test data
 Re-run any time to wipe + repopulate (handy while debugging):
 ```bash
