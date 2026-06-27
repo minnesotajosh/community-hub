@@ -23,6 +23,8 @@ const concernSchema = new mongoose.Schema(
     city: { type: mongoose.Schema.Types.ObjectId, ref: 'City', default: null },
     stars: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     status: { type: String, enum: CONCERN_STATUS, default: 'pending' },
+    statusChangedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    statusChangedAt: { type: Date, default: null },
     closed: { type: Boolean, default: false },
     closedAt: { type: Date, default: null },
     forum: { type: mongoose.Schema.Types.ObjectId, ref: 'Forum', default: null },

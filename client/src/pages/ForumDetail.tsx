@@ -60,6 +60,7 @@ export default function ForumDetail() {
     await api.put(`/forums/${id}/close`, { resolutionSummary: summary, closeLinkedConcerns: closeLinked });
     setCloseMode(false); load();
   };
+  const reopenForum = async () => { await api.put(`/forums/${id}/reopen`); load(); };
 
   const isInvited = (uid: string) => forum.invitedUsers?.some((u) => u._id === uid);
 
@@ -131,19 +132,38 @@ export default function ForumDetail() {
                 onChange={(v) => v && link(v)}
                 options={concerns.filter((c) => !forum.linkedConcerns.some((l) => l._id === c._id)).map((c) => ({ value: c._id, label: c.title }))} />
             </div>
-            <Button variant="ghost" onClick={() => setCloseMode(!closeMode)}>Close forum…</Button>
           </div>
-          {closeMode && (
-            <div className="border-t pt-3 space-y-2">
-              <RichEditor placeholder="Resolution summary — actions taken / next steps"
-                value={summary} onChange={setSummary} />
-              <Label className="flex items-center gap-2 text-sm">
-                <Checkbox checked={closeLinked} onCheckedChange={(v) => setCloseLinked(v === true)} />
-                Also close all linked concerns
-              </Label>
-              <Button onClick={closeForum}>Confirm close</Button>
-            </div>
-          )}
+
+          {/* Prominent close action */}
+          <div className="border-t pt-3">
+            {!closeMode ? (
+              <Button variant="destructive" size="lg" className="w-full sm:w-auto" onClick={() => setCloseMode(true)}>
+                Close this forum
+              </Button>
+            ) : (
+              <div className="space-y-2 rounded-lg border-2 border-red-200 bg-red-50/50 p-3">
+                <p className="text-sm font-semibold text-slate-700">Close forum &amp; record resolution</p>
+                <RichEditor placeholder="Resolution summary — actions taken / next steps"
+                  value={summary} onChange={setSummary} />
+                <Label className="flex items-center gap-2 text-sm">
+                  <Checkbox checked={closeLinked} onCheckedChange={(v) => setCloseLinked(v === true)} />
+                  Also close all linked concerns
+                </Label>
+                <div className="flex gap-2">
+                  <Button variant="destructive" onClick={closeForum}>Confirm close</Button>
+                  <Button variant="ghost" onClick={() => setCloseMode(false)}>Cancel</Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Reopen a closed forum — staff */}
+      {staff && closed && (
+        <div className="bg-white rounded-xl p-4 shadow-sm mt-4 flex items-center justify-between gap-3">
+          <span className="text-sm text-slate-500">This forum is closed.</span>
+          <Button size="lg" onClick={reopenForum}>Reopen forum</Button>
         </div>
       )}
 

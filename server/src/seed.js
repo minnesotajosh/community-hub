@@ -157,6 +157,17 @@ async function run() {
     closedAt: new Date(),
   });
 
+  // Attribute existing (non-pending) concern statuses to a moderator so the
+  // "status last changed by" detail shows on seeded data.
+  await Concern.updateMany(
+    { community: riverdale._id, status: { $ne: 'pending' } },
+    { statusChangedBy: rdMod._id, statusChangedAt: new Date() }
+  );
+  await Concern.updateMany(
+    { community: summit._id, status: { $ne: 'pending' } },
+    { statusChangedBy: smMod._id, statusChangedAt: new Date() }
+  );
+
   // --- Notifications ---
   // Mirrors what the notify() service produces in the app. `mins` ago controls
   // ordering/relative time; a few are left unread so the bell badge shows a count.

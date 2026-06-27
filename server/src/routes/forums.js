@@ -223,4 +223,23 @@ router.put('/:id/close', requireRank('hub_moderator'), async (req, res) => {
   res.json({ forum });
 });
 
+// Reopen a closed forum — staff
+router.put('/:id/reopen', requireRank('hub_moderator'), async (req, res) => {
+  const forum = await Forum.findById(req.params.id);
+  if (!forum) return res.status(404).json({ error: 'Not found' });
+  if (!canAccessCommunity(req.user, forum.community))
+    return res.status(403).json({ error: 'Forbidden' });
+  forum.status = 'open';
+  forum.closedAt = null;
+  await forum.save();
+  await notify({
+    recipients: forumParticipants(forum),
+    actor: req.user,
+    type: 'forum_closed',
+    message: `The forum "${forum.title}" was reopened`,
+    forum: forum._id,
+  });
+  res.json({ forum });
+});
+
 export default router;

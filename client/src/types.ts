@@ -51,6 +51,8 @@ export interface Concern {
   city?: Ref | null;
   stars: string[];
   status: ConcernStatus;
+  statusChangedBy?: Pick<User, '_id' | 'name' | 'role'> | null;
+  statusChangedAt?: string | null;
   closed: boolean;
   closedAt?: string | null;
   forum?: { _id: string; title: string; status: ForumStatus } | null;

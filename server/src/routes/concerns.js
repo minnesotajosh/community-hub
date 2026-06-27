@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import Concern from '../models/Concern.js';
-import { authRequired, requireRank, isStaff } from '../middleware/auth.js';
+import { authRequired, isStaff } from '../middleware/auth.js';
 import { communityFilter, canAccessCommunity } from '../middleware/scope.js';
 import { notify, communityStaffIds } from '../services/notify.js';
 
@@ -11,6 +11,11 @@ const router = Router();
 async function concernRecipients(concern) {
   const staff = await communityStaffIds(concern.community);
   return [concern.author, ...concern.stars, ...staff];
+}
+
+// Only the concern's creator or community staff (mod/admin) may change its status.
+function canChangeConcern(user, concern) {
+  return isStaff(user) || String(concern.author) === String(user._id);
 }
 router.use(authRequired);
 
@@ -28,6 +33,7 @@ router.get('/', async (req, res) => {
     .populate('author', 'name role profileImage')
     .populate('city', 'name')
     .populate('forum', 'title status')
+    .populate('statusChangedBy', 'name role')
     .sort({ createdAt: -1 });
   res.json({ concerns });
 });
@@ -36,7 +42,8 @@ router.get('/:id', async (req, res) => {
   const concern = await Concern.findById(req.params.id)
     .populate('author', 'name role profileImage bio')
     .populate('city', 'name')
-    .populate('forum', 'title status');
+    .populate('forum', 'title status')
+    .populate('statusChangedBy', 'name role');
   if (!concern) return res.status(404).json({ error: 'Not found' });
   if (!canAccessCommunity(req.user, concern.community))
     return res.status(403).json({ error: 'Forbidden' });
@@ -84,15 +91,20 @@ router.post('/:id/star', async (req, res) => {
   res.json({ stars: concern.stars.length, starred: !has });
 });
 
-// Moderate status — staff only (mod/admin)
-router.put('/:id/status', requireRank('hub_moderator'), async (req, res) => {
+// Change status — the concern's creator or staff (mod/admin)
+router.put('/:id/status', async (req, res) => {
   const { status } = req.body; // approved | denied | active | pending
   const concern = await Concern.findById(req.params.id);
   if (!concern) return res.status(404).json({ error: 'Not found' });
   if (!canAccessCommunity(req.user, concern.community))
     return res.status(403).json({ error: 'Forbidden' });
+  if (!canChangeConcern(req.user, concern))
+    return res.status(403).json({ error: 'Only the creator or a moderator can change status' });
   concern.status = status;
+  concern.statusChangedBy = req.user._id;
+  concern.statusChangedAt = new Date();
   await concern.save();
+  await concern.populate('statusChangedBy', 'name role');
   await notify({
     recipients: await concernRecipients(concern),
     actor: req.user,
@@ -103,16 +115,21 @@ router.put('/:id/status', requireRank('hub_moderator'), async (req, res) => {
   res.json({ concern });
 });
 
-// Close / reopen — staff
-router.put('/:id/close', requireRank('hub_moderator'), async (req, res) => {
+// Close / reopen — the concern's creator or staff (mod/admin)
+router.put('/:id/close', async (req, res) => {
   const { closed } = req.body;
   const concern = await Concern.findById(req.params.id);
   if (!concern) return res.status(404).json({ error: 'Not found' });
   if (!canAccessCommunity(req.user, concern.community))
     return res.status(403).json({ error: 'Forbidden' });
+  if (!canChangeConcern(req.user, concern))
+    return res.status(403).json({ error: 'Only the creator or a moderator can change status' });
   concern.closed = !!closed;
   concern.closedAt = closed ? new Date() : null;
+  concern.statusChangedBy = req.user._id;
+  concern.statusChangedAt = new Date();
   await concern.save();
+  await concern.populate('statusChangedBy', 'name role');
   await notify({
     recipients: await concernRecipients(concern),
     actor: req.user,

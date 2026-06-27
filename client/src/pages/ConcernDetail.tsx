@@ -33,6 +33,8 @@ export function ConcernView({ id, onNotFound, onChanged }: {
   if (!c) return null;
 
   const staff = isStaff(user);
+  // The creator or staff may change a concern's status / resolve it.
+  const canChange = staff || c.author?._id === user?._id;
   const refresh = () => { load(); onChanged?.(); };
   const setStatus = async (status: ConcernStatus) => { await api.put(`/concerns/${id}/status`, { status }); refresh(); };
   const toggleClose = async () => { await api.put(`/concerns/${id}/close`, { closed: !c.closed }); refresh(); };
@@ -135,9 +137,17 @@ export function ConcernView({ id, onNotFound, onChanged }: {
         </div>
       )}
 
-      {staff && (
+      {c.statusChangedBy && c.statusChangedAt && (
+        <p className="mt-3 text-xs text-slate-400">
+          Status last changed by {c.statusChangedBy.name} · {new Date(c.statusChangedAt).toLocaleString()}
+        </p>
+      )}
+
+      {canChange && (
         <div className="mt-6 border-t pt-4">
-          <p className="text-xs font-semibold text-slate-500 uppercase mb-2">Moderator actions</p>
+          <p className="text-xs font-semibold text-slate-500 uppercase mb-2">
+            {staff ? 'Moderator actions' : 'Manage your concern'}
+          </p>
           <div className="flex flex-wrap gap-2">
             {c.status === 'pending' && <>
               <Button onClick={() => setStatus('approved')}>Approve</Button>
