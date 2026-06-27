@@ -1,12 +1,12 @@
 import { Link, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { useAuth } from '../auth';
-import { ROLE_LABELS, isStaff, isGlobal } from '../api';
-import { Avatar } from '../components/common';
+import { isStaff, isGlobal } from '../api';
 import NotificationBell from '../components/NotificationBell';
+import UserMenu from '../components/UserMenu';
 
 export default function Layout({ children }: { children: ReactNode }) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const loc = useLocation();
   if (!user) return null;
 
@@ -27,19 +27,9 @@ export default function Layout({ children }: { children: ReactNode }) {
           <Link to="/" className="font-bold text-brand-700 text-lg mr-4">Civic Hub</Link>
           {navItem('/community', 'Community')}
           {isStaff(user) && navItem('/admin', isGlobal(user) ? 'Admin' : 'Manage')}
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-1">
             <NotificationBell />
-            <div className="text-right hidden sm:block">
-              <div className="text-sm font-medium leading-tight">{user.name}</div>
-              <div className="text-xs text-slate-500 leading-tight">
-                {ROLE_LABELS[user.role]}
-                {user.community ? ` · ${user.community.name}` : ''}
-              </div>
-            </div>
-            <Avatar user={user} />
-            <button onClick={logout} className="text-xs text-slate-500 hover:text-red-600 underline">
-              Logout
-            </button>
+            <UserMenu />
           </div>
         </div>
       </header>
