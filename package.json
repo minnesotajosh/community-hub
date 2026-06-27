@@ -1,0 +1,17 @@
+{
+  "name": "civic-hub",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Multi-tenant community ticketing system (MERN + Tailwind)",
+  "scripts": {
+    "install:all": "cd server && npm install && cd ../client && npm install",
+    "seed": "cd server && npm run seed",
+    "reset": "cd server && npm run seed",
+    "server": "cd server && npm run dev",
+    "client": "cd client && npm run dev",
+    "dev": "concurrently -n api,web -c blue,green \"npm:server\" \"npm:client\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

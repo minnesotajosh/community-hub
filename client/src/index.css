@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-slate-100 text-slate-800;
+}
+
+/* rich text content */
+.rich p { @apply mb-2; }
+.rich b, .rich strong { @apply font-semibold; }
+.rich em, .rich i { @apply italic; }
+.rich u { @apply underline; }
+.rich ul { @apply list-disc ml-5 mb-2; }
+.rich ol { @apply list-decimal ml-5 mb-2; }
+.rich a { @apply text-brand-600 underline; }
+.rich img { @apply max-w-full rounded-lg my-2; }
+
+/* keep the Quill editor a reasonable height */
+.ql-container { min-height: 120px; font-size: 0.875rem; }
+.ql-editor { min-height: 120px; }
