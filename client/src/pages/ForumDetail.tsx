@@ -1,64 +1,66 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api, { isStaff } from '../api';
 import { useAuth } from '../auth';
-import { Tag, StatusBadge, Rich, Avatar, Button } from '../components/ui';
+import { Tag, StatusBadge, Rich, Avatar, Button, SelectField, Label, Checkbox } from '../components/common';
 import RichEditor from '../components/RichEditor';
+import type { Forum, Concern, User } from '../types';
 
 export default function ForumDetail() {
   const { id } = useParams();
   const { user } = useAuth();
   const nav = useNavigate();
-  const [forum, setForum] = useState(null);
+  const [forum, setForum] = useState<Forum | null>(null);
   const [canComment, setCanComment] = useState(false);
   const [body, setBody] = useState('');
-  const [editing, setEditing] = useState(null);
+  const [editing, setEditing] = useState<string | null>(null);
   const [editBody, setEditBody] = useState('');
   const [closeMode, setCloseMode] = useState(false);
   const [summary, setSummary] = useState('');
   const [closeLinked, setCloseLinked] = useState(true);
 
   // staff helpers
-  const [members, setMembers] = useState([]);
-  const [concerns, setConcerns] = useState([]);
+  const [members, setMembers] = useState<User[]>([]);
+  const [concerns, setConcerns] = useState<Concern[]>([]);
 
   const load = () =>
-    api.get(`/forums/${id}`).then((r) => { setForum(r.data.forum); setCanComment(r.data.canComment); })
+    api.get<{ forum: Forum; canComment: boolean }>(`/forums/${id}`)
+      .then((r) => { setForum(r.data.forum); setCanComment(r.data.canComment); })
       .catch(() => nav('/community/forums'));
   useEffect(() => { load(); }, [id]);
 
   useEffect(() => {
     if (isStaff(user)) {
-      api.get('/users').then((r) => setMembers(r.data.users)).catch(() => {});
-      api.get('/concerns').then((r) => setConcerns(r.data.concerns)).catch(() => {});
+      api.get<{ users: User[] }>('/users').then((r) => setMembers(r.data.users)).catch(() => {});
+      api.get<{ concerns: Concern[] }>('/concerns').then((r) => setConcerns(r.data.concerns)).catch(() => {});
     }
   }, [user]);
 
-  if (!forum) return null;
+  if (!forum || !user) return null;
   const staff = isStaff(user);
   const closed = forum.status === 'closed';
 
-  const isBlank = (html) => !html || !html.replace(/<(.|\n)*?>/g, '').trim();
-  const addComment = async (e) => {
+  const isBlank = (html: string) => !html || !html.replace(/<(.|\n)*?>/g, '').trim();
+  const addComment = async (e: FormEvent) => {
     e.preventDefault();
     if (isBlank(body)) return;
     await api.post(`/forums/${id}/comments`, { body });
     setBody(''); load();
   };
-  const saveEdit = async (cid) => {
+  const saveEdit = async (cid: string) => {
     await api.put(`/forums/${id}/comments/${cid}`, { body: editBody });
     setEditing(null); load();
   };
-  const delComment = async (cid) => { await api.delete(`/forums/${id}/comments/${cid}`); load(); };
-  const starComment = async (cid) => { await api.post(`/forums/${id}/comments/${cid}/star`); load(); };
-  const invite = async (uid) => { await api.post(`/forums/${id}/invite`, { userIds: [uid] }); load(); };
-  const link = async (cid) => { await api.post(`/forums/${id}/link`, { concernId: cid }); load(); };
+  const delComment = async (cid: string) => { await api.delete(`/forums/${id}/comments/${cid}`); load(); };
+  const starComment = async (cid: string) => { await api.post(`/forums/${id}/comments/${cid}/star`); load(); };
+  const invite = async (uid: string) => { await api.post(`/forums/${id}/invite`, { userIds: [uid] }); load(); };
+  const link = async (cid: string) => { await api.post(`/forums/${id}/link`, { concernId: cid }); load(); };
   const closeForum = async () => {
     await api.put(`/forums/${id}/close`, { resolutionSummary: summary, closeLinkedConcerns: closeLinked });
     setCloseMode(false); load();
   };
 
-  const isInvited = (uid) => forum.invitedUsers?.some((u) => u._id === uid);
+  const isInvited = (uid: string) => forum.invitedUsers?.some((u) => u._id === uid);
 
   return (
     <div>
@@ -76,7 +78,7 @@ export default function ForumDetail() {
           <div className="mt-4 bg-slate-50 border rounded-lg p-3">
             <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Resolution summary</p>
             <Rich html={forum.resolutionSummary} />
-            <p className="text-xs text-slate-400 mt-1">Closed {new Date(forum.closedAt).toLocaleString()}</p>
+            {forum.closedAt && <p className="text-xs text-slate-400 mt-1">Closed {new Date(forum.closedAt).toLocaleString()}</p>}
           </div>
         )}
 
@@ -105,35 +107,29 @@ export default function ForumDetail() {
       {staff && !closed && (
         <div className="bg-white rounded-xl p-4 shadow-sm mt-4 space-y-3">
           <p className="text-xs font-semibold text-slate-500 uppercase">Moderator tools</p>
-          <div className="flex flex-wrap gap-3 text-sm">
-            <label className="flex items-center gap-1">
+          <div className="flex flex-wrap gap-3 text-sm items-center">
+            <div className="flex items-center gap-1">
               Invite member:
-              <select className="border rounded px-2 py-1" defaultValue=""
-                onChange={(e) => e.target.value && invite(e.target.value)}>
-                <option value="">— select —</option>
-                {members.filter((m) => m.role === 'member' && !isInvited(m._id))
-                  .map((m) => <option key={m._id} value={m._id}>{m.name}</option>)}
-              </select>
-            </label>
-            <label className="flex items-center gap-1">
+              <SelectField className="w-48" value="" placeholder="— select —"
+                onChange={(v) => v && invite(v)}
+                options={members.filter((m) => m.role === 'member' && !isInvited(m._id)).map((m) => ({ value: m._id, label: m.name }))} />
+            </div>
+            <div className="flex items-center gap-1">
               Link concern:
-              <select className="border rounded px-2 py-1" defaultValue=""
-                onChange={(e) => e.target.value && link(e.target.value)}>
-                <option value="">— select —</option>
-                {concerns.filter((c) => !forum.linkedConcerns.some((l) => l._id === c._id))
-                  .map((c) => <option key={c._id} value={c._id}>{c.title}</option>)}
-              </select>
-            </label>
+              <SelectField className="w-48" value="" placeholder="— select —"
+                onChange={(v) => v && link(v)}
+                options={concerns.filter((c) => !forum.linkedConcerns.some((l) => l._id === c._id)).map((c) => ({ value: c._id, label: c.title }))} />
+            </div>
             <Button variant="ghost" onClick={() => setCloseMode(!closeMode)}>Close forum…</Button>
           </div>
           {closeMode && (
             <div className="border-t pt-3 space-y-2">
               <RichEditor placeholder="Resolution summary — actions taken / next steps"
                 value={summary} onChange={setSummary} />
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={closeLinked} onChange={(e) => setCloseLinked(e.target.checked)} />
+              <Label className="flex items-center gap-2 text-sm">
+                <Checkbox checked={closeLinked} onCheckedChange={(v) => setCloseLinked(v === true)} />
                 Also close all linked concerns
-              </label>
+              </Label>
               <Button onClick={closeForum}>Confirm close</Button>
             </div>
           )}

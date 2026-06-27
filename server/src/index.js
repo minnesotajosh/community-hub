@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import 'express-async-errors';
 import cors from 'cors';
 import { connectDB } from './db.js';
 import authRoutes from './routes/auth.js';
@@ -21,6 +22,10 @@ app.use('/api/forums', forumRoutes);
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, _req, res, _next) => {
+  // A bad ObjectId (e.g. malformed :id in the URL) -> treat as not found, not a 500.
+  if (err.name === 'CastError') {
+    return res.status(404).json({ error: 'Not found' });
+  }
   console.error(err);
   res.status(500).json({ error: err.message || 'Server error' });
 });

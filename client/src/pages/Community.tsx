@@ -1,25 +1,26 @@
-import { useEffect, useState } from 'react';
-import { Routes, Route, Navigate, NavLink, useNavigate } from 'react-router-dom';
+import { useEffect, useState, type FormEvent, type MouseEvent } from 'react';
+import { Routes, Route, Navigate, NavLink, useNavigate, useParams } from 'react-router-dom';
 import api, { TAGS, isStaff } from '../api';
 import { useAuth } from '../auth';
-import { Tag, StatusBadge, Button, TagSelect, Modal } from '../components/ui';
+import { Tag, StatusBadge, Button, TagSelect, Modal, Input } from '../components/common';
 import RichEditor from '../components/RichEditor';
-import { useTableControls, TableToolbar, DataTable, TableCard } from '../components/DataTable';
-import ConcernDetail from './ConcernDetail';
+import { useTableControls, TableToolbar, DataTable, TableCard, type ColumnDef } from '../components/DataTable';
+import { ConcernView } from './ConcernDetail';
 import ForumDetail from './ForumDetail';
+import type { Concern, Forum, Tag as TagType } from '../types';
 
 const tagOptions = TAGS.map((t) => ({ value: t, label: t.replace('_', ' & ') }));
 
 export default function Community() {
   const { user } = useAuth();
-  const tabClass = ({ isActive }) =>
+  const tabClass = ({ isActive }: { isActive: boolean }) =>
     `px-3 py-1.5 rounded-lg text-sm font-medium ${isActive ? 'bg-brand-500 text-white' : 'bg-white text-slate-600'}`;
 
   return (
     <div>
       <h1 className="text-xl font-bold mb-1">Community</h1>
       <p className="text-sm text-slate-500 mb-4">
-        {user.community ? user.community.name : 'All communities'} — concerns, forums & resources
+        {user?.community ? user.community.name : 'All communities'} — concerns, forums & resources
       </p>
       <div className="flex gap-2 mb-4">
         <NavLink to="/community/concerns" className={tabClass}>Concerns</NavLink>
@@ -30,7 +31,7 @@ export default function Community() {
       <Routes>
         <Route index element={<Navigate to="concerns" replace />} />
         <Route path="concerns" element={<ConcernsList />} />
-        <Route path="concerns/:id" element={<ConcernDetail />} />
+        <Route path="concerns/:id" element={<ConcernsList />} />
         <Route path="forums" element={<ForumsList />} />
         <Route path="forums/:id" element={<ForumDetail />} />
         <Route path="resources" element={<Resources />} />
@@ -44,25 +45,28 @@ export default function Community() {
 
 const CONCERN_STATUSES = ['pending', 'denied', 'approved', 'active'];
 
+interface ConcernForm { title: string; tag: TagType; description: string; }
+
 function ConcernsList() {
   const { user } = useAuth();
   const nav = useNavigate();
-  const [concerns, setConcerns] = useState([]);
+  const { id: selectedId } = useParams();
+  const [concerns, setConcerns] = useState<Concern[]>([]);
   const [modal, setModal] = useState(false);
-  const [form, setForm] = useState({ title: '', tag: 'other', description: '' });
+  const [form, setForm] = useState<ConcernForm>({ title: '', tag: 'other', description: '' });
 
-  const load = () => api.get('/concerns').then((r) => setConcerns(r.data.concerns));
+  const load = () => api.get<{ concerns: Concern[] }>('/concerns').then((r) => setConcerns(r.data.concerns));
   useEffect(() => { load(); }, []);
 
-  const create = async (e) => {
+  const create = async (e: FormEvent) => {
     e.preventDefault();
     await api.post('/concerns', form);
     setForm({ title: '', tag: 'other', description: '' });
     setModal(false); load();
   };
-  const star = async (e, id) => { e.stopPropagation(); await api.post(`/concerns/${id}/star`); load(); };
+  const star = async (e: MouseEvent, id: string) => { e.stopPropagation(); await api.post(`/concerns/${id}/star`); load(); };
 
-  const ctrl = useTableControls({
+  const ctrl = useTableControls<Concern>({
     rows: concerns,
     search: (c) => `${c.title} ${c.author?.name || ''}`,
     filters: [
@@ -70,49 +74,59 @@ function ConcernsList() {
       { key: 'status', match: (c, v) => c.status === v },
     ],
     sortAccessors: {
-      title: (c) => c.title.toLowerCase(),
       stars: (c) => c.stars?.length || 0,
+      title: (c) => c.title.toLowerCase(),
+      tag: (c) => c.tag,
+      status: (c) => c.status,
+      author: (c) => (c.author?.name || '').toLowerCase(),
+      city: (c) => (c.city?.name || '').toLowerCase(),
       created: (c) => new Date(c.createdAt).getTime(),
     },
     initialSort: { key: 'created', dir: 'desc' },
   });
 
-  const columns = [
+  const columns: ColumnDef<Concern>[] = [
     {
-      key: 'star', header: '★', tdClass: 'w-12',
+      key: 'star', header: '★', sortKey: 'stars', sortable: true, tdClass: 'w-14',
       render: (c) => (
-        <button onClick={(e) => star(e, c._id)} className="flex flex-col items-center text-slate-400 hover:text-amber-500">
+        <button onClick={(e) => star(e, c._id)} className="flex items-center gap-1 text-slate-400 hover:text-amber-500">
           <span>★</span><span className="text-xs font-semibold">{c.stars?.length || 0}</span>
         </button>
       ),
     },
     { key: 'title', header: 'Title', sortable: true, render: (c) => <span className="font-medium text-brand-700">{c.title}</span> },
-    { key: 'tag', header: 'Category', render: (c) => <Tag tag={c.tag} /> },
-    { key: 'status', header: 'Status', render: (c) => (
-      <span className="flex gap-1">{<StatusBadge status={c.status} />}{c.closed && <StatusBadge status="closed" />}</span>
+    { key: 'tag', header: 'Category', sortable: true, render: (c) => <Tag tag={c.tag} /> },
+    { key: 'status', header: 'Status', sortable: true, render: (c) => (
+      <span className="flex gap-1"><StatusBadge status={c.status} />{c.closed && <StatusBadge status="closed" />}</span>
     ) },
-    { key: 'author', header: 'Author', render: (c) => <span className="text-slate-500">{c.author?.name}</span> },
-    { key: 'city', header: 'City', render: (c) => <span className="text-slate-500">{c.city?.name || '—'}</span> },
+    { key: 'author', header: 'Author', sortable: true, render: (c) => <span className="text-slate-500">{c.author?.name}</span> },
+    { key: 'city', header: 'City', sortable: true, render: (c) => <span className="text-slate-500">{c.city?.name || '—'}</span> },
     { key: 'created', header: 'Raised', sortable: true, render: (c) => <span className="text-slate-500">{new Date(c.createdAt).toLocaleDateString()}</span> },
   ];
 
   return (
     <div>
       <TableCard>
-        <TableToolbar {...ctrl} searchPlaceholder="Search title or author…"
+        <TableToolbar query={ctrl.query} setQuery={ctrl.setQuery} filterValues={ctrl.filterValues} setFilter={ctrl.setFilter}
+          searchPlaceholder="Search title or author…"
           filters={[
             { key: 'tag', allLabel: 'All categories', options: tagOptions },
             { key: 'status', allLabel: 'All statuses', options: CONCERN_STATUSES.map((s) => ({ value: s, label: s })) },
           ]}
-          actions={user.community && <Button onClick={() => setModal(true)}>+ Raise a concern</Button>}
+          actions={user?.community && <Button onClick={() => setModal(true)}>+ Raise a concern</Button>}
           count={ctrl.visible.length} total={concerns.length} />
         <DataTable columns={columns} rows={ctrl.visible} sort={ctrl.sort} toggleSort={ctrl.toggleSort}
           onRowClick={(c) => nav(`/community/concerns/${c._id}`)} empty="No concerns match your filters." />
       </TableCard>
 
+      <Modal open={!!selectedId} onClose={() => nav('/community/concerns')} title="Concern details"
+        className="sm:max-w-2xl">
+        <ConcernView id={selectedId} onNotFound={() => nav('/community/concerns')} onChanged={load} />
+      </Modal>
+
       <Modal open={modal} onClose={() => setModal(false)} title="Raise a concern">
         <form onSubmit={create} className="space-y-3">
-          <input required placeholder="Title" className="w-full border rounded px-3 py-2 text-sm"
+          <Input required placeholder="Title"
             value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
           <div className="flex items-center gap-2">
             <span className="text-sm text-slate-500">Category:</span>
@@ -133,24 +147,26 @@ function ConcernsList() {
 
 // ---------------- forums ----------------
 
+interface ForumForm { title: string; tag: TagType; description: string; }
+
 function ForumsList() {
   const { user } = useAuth();
   const nav = useNavigate();
-  const [forums, setForums] = useState([]);
+  const [forums, setForums] = useState<Forum[]>([]);
   const [modal, setModal] = useState(false);
-  const [form, setForm] = useState({ title: '', tag: 'other', description: '' });
+  const [form, setForm] = useState<ForumForm>({ title: '', tag: 'other', description: '' });
 
-  const load = () => api.get('/forums').then((r) => setForums(r.data.forums));
+  const load = () => api.get<{ forums: Forum[] }>('/forums').then((r) => setForums(r.data.forums));
   useEffect(() => { load(); }, []);
 
-  const create = async (e) => {
+  const create = async (e: FormEvent) => {
     e.preventDefault();
     await api.post('/forums', form);
     setForm({ title: '', tag: 'other', description: '' });
     setModal(false); load();
   };
 
-  const ctrl = useTableControls({
+  const ctrl = useTableControls<Forum>({
     rows: forums,
     search: (f) => `${f.title} ${f.author?.name || ''}`,
     filters: [
@@ -159,26 +175,31 @@ function ForumsList() {
     ],
     sortAccessors: {
       title: (f) => f.title.toLowerCase(),
+      tag: (f) => f.tag,
+      status: (f) => f.status,
       comments: (f) => f.comments?.length || 0,
+      linked: (f) => f.linkedConcerns?.length || 0,
+      author: (f) => (f.author?.name || '').toLowerCase(),
       created: (f) => new Date(f.createdAt).getTime(),
     },
     initialSort: { key: 'created', dir: 'desc' },
   });
 
-  const columns = [
+  const columns: ColumnDef<Forum>[] = [
     { key: 'title', header: 'Title', sortable: true, render: (f) => <span className="font-medium text-brand-700">{f.title}</span> },
-    { key: 'tag', header: 'Category', render: (f) => <Tag tag={f.tag} /> },
-    { key: 'status', header: 'Status', render: (f) => <StatusBadge status={f.status} /> },
+    { key: 'tag', header: 'Category', sortable: true, render: (f) => <Tag tag={f.tag} /> },
+    { key: 'status', header: 'Status', sortable: true, render: (f) => <StatusBadge status={f.status} /> },
     { key: 'comments', header: 'Comments', sortable: true, render: (f) => <span className="text-slate-500">{f.comments?.length || 0}</span> },
-    { key: 'linked', header: 'Linked', render: (f) => <span className="text-slate-500">{f.linkedConcerns?.length || 0}</span> },
-    { key: 'author', header: 'Started by', render: (f) => <span className="text-slate-500">{f.author?.name}</span> },
+    { key: 'linked', header: 'Linked', sortable: true, render: (f) => <span className="text-slate-500">{f.linkedConcerns?.length || 0}</span> },
+    { key: 'author', header: 'Started by', sortable: true, render: (f) => <span className="text-slate-500">{f.author?.name}</span> },
     { key: 'created', header: 'Created', sortable: true, render: (f) => <span className="text-slate-500">{new Date(f.createdAt).toLocaleDateString()}</span> },
   ];
 
   return (
     <div>
       <TableCard>
-        <TableToolbar {...ctrl} searchPlaceholder="Search title or author…"
+        <TableToolbar query={ctrl.query} setQuery={ctrl.setQuery} filterValues={ctrl.filterValues} setFilter={ctrl.setFilter}
+          searchPlaceholder="Search title or author…"
           filters={[
             { key: 'tag', allLabel: 'All categories', options: tagOptions },
             { key: 'status', allLabel: 'All statuses', options: [{ value: 'open', label: 'open' }, { value: 'closed', label: 'closed' }] },
@@ -191,7 +212,7 @@ function ForumsList() {
 
       <Modal open={modal} onClose={() => setModal(false)} title="New forum">
         <form onSubmit={create} className="space-y-3">
-          <input required placeholder="Forum title" className="w-full border rounded px-3 py-2 text-sm"
+          <Input required placeholder="Forum title"
             value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
           <div className="flex items-center gap-2">
             <span className="text-sm text-slate-500">Category:</span>

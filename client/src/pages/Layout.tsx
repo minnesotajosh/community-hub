@@ -1,13 +1,15 @@
 import { Link, useLocation } from 'react-router-dom';
+import type { ReactNode } from 'react';
 import { useAuth } from '../auth';
 import { ROLE_LABELS, isStaff, isGlobal } from '../api';
-import { Avatar } from '../components/ui';
+import { Avatar } from '../components/common';
 
-export default function Layout({ children }) {
+export default function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const loc = useLocation();
+  if (!user) return null;
 
-  const navItem = (to, label) => {
+  const navItem = (to: string, label: string) => {
     const active = loc.pathname.startsWith(to);
     return (
       <Link to={to}

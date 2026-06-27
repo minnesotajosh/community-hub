@@ -1,21 +1,31 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import api, { ROLE_LABELS } from '../api';
 import { useAuth } from '../auth';
-import { Button } from '../components/ui';
+import { Button, Input, SelectField, Label } from '../components/common';
+import type { Role } from '../types';
+
+interface DevAccount {
+  _id: string;
+  name: string;
+  email: string;
+  role: Role;
+  community?: { _id: string; name: string } | null;
+}
 
 export default function Login() {
   const { login } = useAuth();
   const [email, setEmail] = useState('member@test.com');
   const [password, setPassword] = useState('test');
-  const [accounts, setAccounts] = useState([]);
+  const [accounts, setAccounts] = useState<DevAccount[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    api.get('/auth/dev-accounts').then((r) => setAccounts(r.data.accounts)).catch(() => {});
+    api.get<{ accounts: DevAccount[] }>('/auth/dev-accounts')
+      .then((r) => setAccounts(r.data.accounts)).catch(() => {});
   }, []);
 
-  const submit = async (e) => {
+  const submit = async (e?: FormEvent) => {
     e?.preventDefault();
     setError(''); setBusy(true);
     try {
@@ -28,7 +38,7 @@ export default function Login() {
   };
 
   // Dev convenience: pick account -> fill + auto-login
-  const pick = async (acctEmail) => {
+  const pick = async (acctEmail: string) => {
     setEmail(acctEmail);
     setPassword('test');
     setError(''); setBusy(true);
@@ -48,34 +58,29 @@ export default function Login() {
         <p className="text-slate-500 text-sm mb-6">Community concerns & forums</p>
 
         <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg p-3">
-          <label className="block text-xs font-semibold text-amber-800 mb-1">
+          <Label className="block text-xs font-semibold text-amber-800 mb-1">
             ⚡ Dev quick-login (pick a seeded account)
-          </label>
-          <select
-            className="w-full border rounded px-2 py-2 text-sm bg-white"
-            defaultValue=""
-            onChange={(e) => e.target.value && pick(e.target.value)}
-          >
-            <option value="">— Select a test user —</option>
-            {accounts.map((a) => (
-              <option key={a._id} value={a.email}>
-                {ROLE_LABELS[a.role]} — {a.name}
-                {a.community ? ` (${a.community.name})` : ''} [{a.email}]
-              </option>
-            ))}
-          </select>
+          </Label>
+          <SelectField
+            className="bg-white"
+            value=""
+            placeholder="— Select a test user —"
+            onChange={(v) => v && pick(v)}
+            options={accounts.map((a) => ({
+              value: a.email,
+              label: `${ROLE_LABELS[a.role]} — ${a.name}${a.community ? ` (${a.community.name})` : ''} [${a.email}]`,
+            }))}
+          />
         </div>
 
         <form onSubmit={submit} className="space-y-3">
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Email</label>
-            <input className="w-full border rounded px-3 py-2 text-sm"
-              value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Label className="block text-xs font-medium text-slate-600 mb-1">Email</Label>
+            <Input value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Password</label>
-            <input type="password" className="w-full border rounded px-3 py-2 text-sm"
-              value={password} onChange={(e) => setPassword(e.target.value)} />
+            <Label className="block text-xs font-medium text-slate-600 mb-1">Password</Label>
+            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <Button type="submit" disabled={busy} className="w-full">

@@ -2,9 +2,15 @@ import { useMemo } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
+interface RichEditorProps {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}
+
 // Simple RTF editor: bold / italic / underline, lists, links, images.
 // Images are embedded as base64 data URLs directly in the HTML content.
-export default function RichEditor({ value, onChange, placeholder }) {
+export default function RichEditor({ value, onChange, placeholder }: RichEditorProps) {
   const modules = useMemo(
     () => ({
       toolbar: [
