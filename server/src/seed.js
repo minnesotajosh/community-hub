@@ -6,6 +6,7 @@ import Community from './models/Community.js';
 import City from './models/City.js';
 import Concern from './models/Concern.js';
 import Forum from './models/Forum.js';
+import Notification from './models/Notification.js';
 
 const PW = 'test';
 
@@ -26,6 +27,7 @@ async function run() {
     City.deleteMany({}),
     Concern.deleteMany({}),
     Forum.deleteMany({}),
+    Notification.deleteMany({}),
   ]);
 
   // --- Communities & cities ---
@@ -149,12 +151,49 @@ async function run() {
     closedAt: new Date(),
   });
 
+  // --- Notifications ---
+  // Mirrors what the notify() service produces in the app. `mins` ago controls
+  // ordering/relative time; a few are left unread so the bell badge shows a count.
+  const minsAgo = (m) => new Date(Date.now() - m * 60_000);
+  await Notification.insertMany([
+    // Carlos Munoz (smMember2) — the user shown in the header screenshot.
+    { recipient: smMember2._id, actor: smMember._id, type: 'forum_comment',
+      message: `${smMember.name} commented on "${f2.title}"`, forum: f2._id,
+      read: false, createdAt: minsAgo(8), updatedAt: minsAgo(8) },
+    { recipient: smMember2._id, actor: smMod._id, type: 'forum_new',
+      message: `You were invited to the forum "${f2.title}"`, forum: f2._id,
+      read: false, createdAt: minsAgo(45), updatedAt: minsAgo(45) },
+    { recipient: smMember2._id, actor: smMod._id, type: 'concern_status',
+      message: `Concern "${s2.title}" was marked approved`, concern: s2._id,
+      read: true, readAt: minsAgo(180), createdAt: minsAgo(200), updatedAt: minsAgo(180) },
+    { recipient: smMember2._id, actor: smMember._id, type: 'concern_status',
+      message: `Concern "${s1.title}" was marked active`, concern: s1._id,
+      read: true, readAt: minsAgo(1500), createdAt: minsAgo(1600), updatedAt: minsAgo(1500) },
+
+    // Riverdale member (member@test.com / rdMember) — a second demo inbox.
+    { recipient: rdMember._id, actor: rdMember2._id, type: 'forum_comment',
+      message: `${rdMember2.name} commented on "${f1.title}"`, forum: f1._id,
+      read: false, createdAt: minsAgo(20), updatedAt: minsAgo(20) },
+    { recipient: rdMember._id, actor: rdMod._id, type: 'concern_status',
+      message: `Concern "${c1.title}" was marked active`, concern: c1._id,
+      read: true, readAt: minsAgo(600), createdAt: minsAgo(700), updatedAt: minsAgo(600) },
+
+    // Staff: moderators get notified of newly raised (pending) concerns.
+    { recipient: smMod._id, actor: smMember2._id, type: 'concern_new',
+      message: `${smMember2.name} raised a concern: "${s3.title}"`, concern: s3._id,
+      read: false, createdAt: minsAgo(120), updatedAt: minsAgo(120) },
+    { recipient: rdMod._id, actor: rdMember3._id, type: 'concern_new',
+      message: `${rdMember3.name} raised a concern: "${c3.title}"`, concern: c3._id,
+      read: false, createdAt: minsAgo(300), updatedAt: minsAgo(300) },
+  ]);
+
   console.log('\nSeed complete!');
   console.log('Communities:', await Community.countDocuments());
   console.log('Cities:', await City.countDocuments());
   console.log('Users:', await User.countDocuments());
   console.log('Concerns:', await Concern.countDocuments());
   console.log('Forums:', await Forum.countDocuments());
+  console.log('Notifications:', await Notification.countDocuments());
   console.log('\nLogin accounts (password "test"):');
   console.log('  topadmin@test.com    (Top Level Admin)');
   console.log('  iacadmin@test.com    (IAC Board)');
