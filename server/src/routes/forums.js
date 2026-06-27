@@ -76,10 +76,37 @@ router.post('/:id/link', requireRank('hub_moderator'), async (req, res) => {
   if (!forum) return res.status(404).json({ error: 'Not found' });
   if (!canAccessCommunity(req.user, forum.community))
     return res.status(403).json({ error: 'Forbidden' });
+  const concern = await Concern.findById(concernId);
+  if (!concern) return res.status(404).json({ error: 'Concern not found' });
+  if (!canAccessCommunity(req.user, concern.community))
+    return res.status(403).json({ error: 'Forbidden' });
+  // A concern belongs to one forum: detach it from any previous forum first.
+  if (concern.forum && String(concern.forum) !== String(forum._id))
+    await Forum.findByIdAndUpdate(concern.forum, { $pull: { linkedConcerns: concern._id } });
   if (!forum.linkedConcerns.some((c) => String(c) === String(concernId)))
     forum.linkedConcerns.push(concernId);
   await forum.save();
-  await Concern.findByIdAndUpdate(concernId, { status: 'active', forum: forum._id });
+  concern.status = 'active';
+  concern.forum = forum._id;
+  await concern.save();
+  res.json({ forum });
+});
+
+// Unlink a concern from a forum — staff
+router.delete('/:id/link/:concernId', requireRank('hub_moderator'), async (req, res) => {
+  const forum = await Forum.findById(req.params.id);
+  if (!forum) return res.status(404).json({ error: 'Not found' });
+  if (!canAccessCommunity(req.user, forum.community))
+    return res.status(403).json({ error: 'Forbidden' });
+  forum.linkedConcerns = forum.linkedConcerns.filter((c) => String(c) !== String(req.params.concernId));
+  await forum.save();
+  // Clear the link on the concern; revert an auto-activated concern to approved.
+  const concern = await Concern.findById(req.params.concernId);
+  if (concern && String(concern.forum) === String(forum._id)) {
+    concern.forum = null;
+    if (concern.status === 'active') concern.status = 'approved';
+    await concern.save();
+  }
   res.json({ forum });
 });
 

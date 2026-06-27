@@ -55,6 +55,7 @@ export default function ForumDetail() {
   const starComment = async (cid: string) => { await api.post(`/forums/${id}/comments/${cid}/star`); load(); };
   const invite = async (uid: string) => { await api.post(`/forums/${id}/invite`, { userIds: [uid] }); load(); };
   const link = async (cid: string) => { await api.post(`/forums/${id}/link`, { concernId: cid }); load(); };
+  const unlink = async (cid: string) => { await api.delete(`/forums/${id}/link/${cid}`); load(); };
   const closeForum = async () => {
     await api.put(`/forums/${id}/close`, { resolutionSummary: summary, closeLinkedConcerns: closeLinked });
     setCloseMode(false); load();
@@ -93,10 +94,15 @@ export default function ForumDetail() {
             <p className="text-xs font-semibold text-slate-500 uppercase mb-1">Linked concerns</p>
             <div className="flex flex-wrap gap-2">
               {forum.linkedConcerns.map((c) => (
-                <Link key={c._id} to={`/community/concerns/${c._id}`}
-                  className="text-sm bg-brand-50 text-brand-700 px-2 py-1 rounded">
-                  {c.title} {c.closed && '✓'}
-                </Link>
+                <span key={c._id} className="inline-flex items-center gap-1 text-sm bg-brand-50 text-brand-700 pl-2 pr-1 py-1 rounded">
+                  <Link to={`/community/concerns/${c._id}`} className="hover:underline">
+                    {c.title} {c.closed && '✓'}
+                  </Link>
+                  {staff && !closed && (
+                    <button onClick={() => unlink(c._id)} title="Unlink concern"
+                      className="text-brand-400 hover:text-red-600 leading-none px-1">×</button>
+                  )}
+                </span>
               ))}
             </div>
           </div>
