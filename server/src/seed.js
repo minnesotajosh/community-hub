@@ -185,6 +185,42 @@ async function run() {
     { recipient: rdMod._id, actor: rdMember3._id, type: 'concern_new',
       message: `${rdMember3.name} raised a concern: "${c3.title}"`, concern: c3._id,
       read: false, createdAt: minsAgo(300), updatedAt: minsAgo(300) },
+
+    // Hub admins (forum authors) — activity on the forums they started.
+    { recipient: rdAdmin._id, actor: rdMember2._id, type: 'forum_comment',
+      message: `${rdMember2.name} commented on "${f1.title}"`, forum: f1._id,
+      read: false, createdAt: minsAgo(25), updatedAt: minsAgo(25) },
+    { recipient: rdAdmin._id, actor: rdMember3._id, type: 'concern_new',
+      message: `${rdMember3.name} raised a concern: "${c3.title}"`, concern: c3._id,
+      read: true, readAt: minsAgo(280), createdAt: minsAgo(300), updatedAt: minsAgo(280) },
+    { recipient: smAdmin._id, actor: smMember2._id, type: 'concern_new',
+      message: `${smMember2.name} raised a concern: "${s3.title}"`, concern: s3._id,
+      read: false, createdAt: minsAgo(118), updatedAt: minsAgo(118) },
+
+    // Other members.
+    { recipient: smMember._id, actor: smMod._id, type: 'forum_new',
+      message: `You were invited to the forum "${f2.title}"`, forum: f2._id,
+      read: true, readAt: minsAgo(1400), createdAt: minsAgo(1500), updatedAt: minsAgo(1400) },
+    { recipient: smMember._id, actor: smMember2._id, type: 'forum_comment',
+      message: `${smMember2.name} commented on "${f2.title}"`, forum: f2._id,
+      read: false, createdAt: minsAgo(12), updatedAt: minsAgo(12) },
+    { recipient: rdMember2._id, actor: rdMember._id, type: 'forum_comment',
+      message: `${rdMember.name} commented on "${f1.title}"`, forum: f1._id,
+      read: false, createdAt: minsAgo(30), updatedAt: minsAgo(30) },
+    { recipient: rdMember2._id, actor: rdMod._id, type: 'concern_status',
+      message: `Concern "${c2.title}" was marked active`, concern: c2._id,
+      read: true, readAt: minsAgo(640), createdAt: minsAgo(700), updatedAt: minsAgo(640) },
+    { recipient: rdMember3._id, actor: rdMod._id, type: 'forum_closed',
+      message: `The forum "${f3.title}" was closed`, forum: f3._id,
+      read: false, createdAt: minsAgo(90), updatedAt: minsAgo(90) },
+
+    // Global roles (top admin / IAC board) — they oversee all communities.
+    { recipient: iacBoard._id, actor: rdMember._id, type: 'concern_new',
+      message: `${rdMember.name} raised a concern: "${c3.title}"`, concern: c3._id,
+      read: false, createdAt: minsAgo(150), updatedAt: minsAgo(150) },
+    { recipient: topAdmin._id, actor: smMember2._id, type: 'concern_new',
+      message: `${smMember2.name} raised a concern: "${s3.title}"`, concern: s3._id,
+      read: false, createdAt: minsAgo(160), updatedAt: minsAgo(160) },
   ]);
 
   console.log('\nSeed complete!');

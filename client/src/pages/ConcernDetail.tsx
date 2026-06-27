@@ -49,7 +49,11 @@ export function ConcernView({ id, onNotFound, onChanged }: {
       <div className="flex items-center gap-2 mt-4 text-sm text-slate-500">
         <Avatar user={c.author} />
         <div>
-          <div className="font-medium text-slate-700">{c.author?.name}</div>
+          {c.author ? (
+            <Link to={`/community/users/${c.author._id}`} className="font-medium text-slate-700 hover:text-brand-600 hover:underline">
+              {c.author.name}
+            </Link>
+          ) : <div className="font-medium text-slate-700">Unknown</div>}
           <div className="text-xs">{c.city?.name} · {new Date(c.createdAt).toLocaleString()}</div>
         </div>
       </div>

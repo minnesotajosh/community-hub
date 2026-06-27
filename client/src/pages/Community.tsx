@@ -7,6 +7,7 @@ import RichEditor from '../components/RichEditor';
 import { useTableControls, TableToolbar, DataTable, TableCard, type ColumnDef } from '../components/DataTable';
 import { ConcernView } from './ConcernDetail';
 import ForumDetail from './ForumDetail';
+import Profile from './Profile';
 import type { Concern, Forum, Tag as TagType } from '../types';
 
 const tagOptions = TAGS.map((t) => ({ value: t, label: t.replace('_', ' & ') }));
@@ -34,6 +35,7 @@ export default function Community() {
         <Route path="concerns/:id" element={<ConcernsList />} />
         <Route path="forums" element={<ForumsList />} />
         <Route path="forums/:id" element={<ForumDetail />} />
+        <Route path="users/:id" element={<Profile />} />
         <Route path="resources" element={<Resources />} />
         <Route path="*" element={<Navigate to="concerns" replace />} />
       </Routes>

@@ -1,11 +1,49 @@
 import { Router } from 'express';
 import User, { ROLES } from '../models/User.js';
 import City from '../models/City.js';
-import { authRequired, requireRank, RANK, isGlobal } from '../middleware/auth.js';
+import Concern from '../models/Concern.js';
+import Forum from '../models/Forum.js';
+import { authRequired, requireRank, RANK, isGlobal, isStaff } from '../middleware/auth.js';
 import { communityFilter, canAccessCommunity } from '../middleware/scope.js';
 
 const router = Router();
 router.use(authRequired);
+
+// Public-ish profile for a community member: basic info plus the concerns they
+// raised and the forum comments they left, scoped to what the viewer can see.
+router.get('/:id/profile', async (req, res) => {
+  const target = await User.findById(req.params.id)
+    .populate('city', 'name')
+    .populate('community', 'name');
+  if (!target) return res.status(404).json({ error: 'Not found' });
+  if (!canAccessCommunity(req.user, target.community))
+    return res.status(403).json({ error: 'Forbidden' });
+
+  const isSelf = String(target._id) === String(req.user._id);
+
+  // Concerns authored by the target. Members only see another user's
+  // approved/active concerns; staff and the user themselves see all.
+  const concernFilter = { author: target._id };
+  if (!isSelf && !isStaff(req.user)) concernFilter.status = { $in: ['approved', 'active'] };
+  const concerns = await Concern.find(concernFilter)
+    .select('title status tag createdAt closed')
+    .sort({ createdAt: -1 });
+
+  // Forum comments authored by the target (forums are visible to the community).
+  const forums = await Forum.find({ community: target.community, 'comments.author': target._id })
+    .select('title comments');
+  const comments = [];
+  for (const forum of forums) {
+    for (const c of forum.comments) {
+      if (String(c.author) === String(target._id)) {
+        comments.push({ _id: c._id, body: c.body, createdAt: c.createdAt, forum: { _id: forum._id, title: forum.title } });
+      }
+    }
+  }
+  comments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  res.json({ user: target, concerns, comments, isSelf });
+});
 
 // List users — scoped to community for non-global roles
 router.get('/', requireRank('hub_moderator'), async (req, res) => {

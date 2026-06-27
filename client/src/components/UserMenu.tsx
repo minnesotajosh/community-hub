@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../auth';
 import { ROLE_LABELS } from '../api';
 import { Avatar } from './common';
@@ -39,9 +40,16 @@ export default function UserMenu() {
               {user.community ? ` · ${user.community.name}` : ''}
             </div>
           </div>
+          <Link
+            to={`/community/users/${user._id}`}
+            onClick={() => setOpen(false)}
+            className="block px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50"
+          >
+            View profile
+          </Link>
           <button
             onClick={logout}
-            className="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-red-600"
+            className="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-red-600 border-t"
           >
             Logout
           </button>

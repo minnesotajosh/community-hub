@@ -71,7 +71,12 @@ export default function ForumDetail() {
           <Tag tag={forum.tag} />
           <StatusBadge status={forum.status} />
         </div>
-        <div className="text-xs text-slate-500 mt-1">started by {forum.author?.name}</div>
+        <div className="text-xs text-slate-500 mt-1">
+          started by{' '}
+          {forum.author
+            ? <Link to={`/community/users/${forum.author._id}`} className="hover:text-brand-600 hover:underline">{forum.author.name}</Link>
+            : 'Unknown'}
+        </div>
         <div className="mt-3"><Rich html={forum.description} /></div>
 
         {closed && (
@@ -148,7 +153,9 @@ export default function ForumDetail() {
                 <div className="flex items-center gap-2">
                   <Avatar user={cm.author} />
                   <div className="flex-1">
-                    <div className="text-sm font-medium">{cm.author?.name}</div>
+                    {cm.author
+                      ? <Link to={`/community/users/${cm.author._id}`} className="text-sm font-medium hover:text-brand-600 hover:underline">{cm.author.name}</Link>
+                      : <div className="text-sm font-medium">Unknown</div>}
                     <div className="text-xs text-slate-400">{new Date(cm.createdAt).toLocaleString()}</div>
                   </div>
                   <button onClick={() => !mine && starComment(cm._id)}

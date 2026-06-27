@@ -101,6 +101,20 @@ export interface Notification {
   createdAt: string;
 }
 
+export interface ProfileComment {
+  _id: string;
+  body: string;
+  createdAt: string;
+  forum: { _id: string; title: string };
+}
+
+export interface UserProfile {
+  user: User;
+  concerns: Array<Pick<Concern, '_id' | 'title' | 'status' | 'tag' | 'createdAt' | 'closed'>>;
+  comments: ProfileComment[];
+  isSelf: boolean;
+}
+
 /** Sort direction + key used by the shared table tools. */
 export interface SortState {
   key: string | null;
