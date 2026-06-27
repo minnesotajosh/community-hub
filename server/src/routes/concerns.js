@@ -2,8 +2,16 @@ import { Router } from 'express';
 import Concern from '../models/Concern.js';
 import { authRequired, requireRank, isStaff } from '../middleware/auth.js';
 import { communityFilter, canAccessCommunity } from '../middleware/scope.js';
+import { notify, communityStaffIds } from '../services/notify.js';
 
 const router = Router();
+
+// Recipients interested in a concern: its author, anyone who starred it, and
+// the community's staff. The acting user is excluded inside notify().
+async function concernRecipients(concern) {
+  const staff = await communityStaffIds(concern.community);
+  return [concern.author, ...concern.stars, ...staff];
+}
 router.use(authRequired);
 
 // List concerns visible to the user (scoped). Members see approved/active + their own.
@@ -50,6 +58,14 @@ router.post('/', async (req, res) => {
     city: req.user.city,
     status: 'pending',
   });
+  // New concerns start pending — only staff can see them, so notify staff.
+  await notify({
+    recipients: await communityStaffIds(concern.community),
+    actor: req.user,
+    type: 'concern_new',
+    message: `${req.user.name} raised a concern: "${concern.title}"`,
+    concern: concern._id,
+  });
   res.status(201).json({ concern });
 });
 
@@ -77,6 +93,13 @@ router.put('/:id/status', requireRank('hub_moderator'), async (req, res) => {
     return res.status(403).json({ error: 'Forbidden' });
   concern.status = status;
   await concern.save();
+  await notify({
+    recipients: await concernRecipients(concern),
+    actor: req.user,
+    type: 'concern_status',
+    message: `Concern "${concern.title}" was marked ${status}`,
+    concern: concern._id,
+  });
   res.json({ concern });
 });
 
@@ -90,6 +113,13 @@ router.put('/:id/close', requireRank('hub_moderator'), async (req, res) => {
   concern.closed = !!closed;
   concern.closedAt = closed ? new Date() : null;
   await concern.save();
+  await notify({
+    recipients: await concernRecipients(concern),
+    actor: req.user,
+    type: 'concern_closed',
+    message: `Concern "${concern.title}" was ${concern.closed ? 'closed' : 'reopened'}`,
+    concern: concern._id,
+  });
   res.json({ concern });
 });
 

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useAuth } from '../auth';
 import { ROLE_LABELS, isStaff, isGlobal } from '../api';
 import { Avatar } from '../components/common';
+import NotificationBell from '../components/NotificationBell';
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
@@ -27,6 +28,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           {navItem('/community', 'Community')}
           {isStaff(user) && navItem('/admin', isGlobal(user) ? 'Admin' : 'Manage')}
           <div className="ml-auto flex items-center gap-3">
+            <NotificationBell />
             <div className="text-right hidden sm:block">
               <div className="text-sm font-medium leading-tight">{user.name}</div>
               <div className="text-xs text-slate-500 leading-tight">

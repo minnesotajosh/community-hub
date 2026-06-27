@@ -85,6 +85,22 @@ export interface Forum {
   updatedAt?: string;
 }
 
+export type NotificationType =
+  | 'concern_new' | 'concern_status' | 'concern_closed'
+  | 'forum_new' | 'forum_comment' | 'forum_closed';
+
+export interface Notification {
+  _id: string;
+  type: NotificationType;
+  message: string;
+  actor?: Pick<User, '_id' | 'name' | 'role' | 'profileImage'> | null;
+  concern?: { _id: string; title: string } | null;
+  forum?: { _id: string; title: string } | null;
+  read: boolean;
+  readAt?: string | null;
+  createdAt: string;
+}
+
 /** Sort direction + key used by the shared table tools. */
 export interface SortState {
   key: string | null;

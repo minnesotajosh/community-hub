@@ -3,6 +3,7 @@ import Forum from '../models/Forum.js';
 import Concern from '../models/Concern.js';
 import { authRequired, requireRank, isStaff } from '../middleware/auth.js';
 import { communityFilter, canAccessCommunity } from '../middleware/scope.js';
+import { notify, forumCommenterIds } from '../services/notify.js';
 
 const router = Router();
 router.use(authRequired);
@@ -10,6 +11,12 @@ router.use(authRequired);
 function canComment(user, forum) {
   if (isStaff(user)) return true;
   return forum.invitedUsers.some((u) => String(u) === String(user._id));
+}
+
+// Forum participants: the author, invited users, and anyone who has commented.
+// The acting user is excluded inside notify().
+function forumParticipants(forum) {
+  return [forum.author, ...forum.invitedUsers, ...forumCommenterIds(forum)];
 }
 
 // List forums (scoped). All users in community can view.
@@ -51,6 +58,14 @@ router.post('/', requireRank('hub_moderator'), async (req, res) => {
       { status: 'active', forum: forum._id }
     );
   }
+  // Let invited users know they've been brought into a new forum discussion.
+  await notify({
+    recipients: forum.invitedUsers,
+    actor: req.user,
+    type: 'forum_new',
+    message: `You were invited to the forum "${forum.title}"`,
+    forum: forum._id,
+  });
   res.status(201).json({ forum });
 });
 
@@ -93,8 +108,18 @@ router.post('/:id/comments', async (req, res) => {
     return res.status(403).json({ error: 'You are not invited to comment on this forum' });
   if (forum.status === 'closed')
     return res.status(400).json({ error: 'Forum is closed' });
+  // Capture participants before adding the new comment so the commenter isn't
+  // double-counted and the recipient set reflects prior activity.
+  const recipients = forumParticipants(forum);
   forum.comments.push({ author: req.user._id, body: req.body.body || '' });
   await forum.save();
+  await notify({
+    recipients,
+    actor: req.user,
+    type: 'forum_comment',
+    message: `${req.user.name} commented on "${forum.title}"`,
+    forum: forum._id,
+  });
   const populated = await forum.populate('comments.author', 'name role profileImage');
   res.status(201).json({ comment: populated.comments[populated.comments.length - 1] });
 });
@@ -161,6 +186,13 @@ router.put('/:id/close', requireRank('hub_moderator'), async (req, res) => {
       { closed: true, closedAt: new Date() }
     );
   }
+  await notify({
+    recipients: forumParticipants(forum),
+    actor: req.user,
+    type: 'forum_closed',
+    message: `The forum "${forum.title}" was closed`,
+    forum: forum._id,
+  });
   res.json({ forum });
 });
 
