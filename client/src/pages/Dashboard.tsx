@@ -96,13 +96,18 @@ export default function Dashboard() {
                         flagged by {f.reporter?.name ?? 'someone'} · {new Date(f.createdAt).toLocaleDateString()}
                       </p>
                     </div>
-                    <div className="flex flex-col gap-1 shrink-0">
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      {/* Primary action: open the flagged item to decide how to handle it. */}
+                      <Link to={targetLink(f)}><Button size="sm">Review →</Button></Link>
                       {f.targetType === 'user' && f.targetUser && !f.targetUser.banned && (
                         <Button size="sm" variant="destructive" onClick={() => banUser(f.targetUser!._id)}>Ban user</Button>
                       )}
-                      <Button size="sm" variant="outline" onClick={() => resolveFlag(f._id, 'resolved')}>Resolve</Button>
-                      <Button size="sm" variant="ghost" onClick={() => resolveFlag(f._id, 'dismissed')}>Dismiss</Button>
                     </div>
+                  </div>
+                  {/* Once handled (or if no action is needed), clear it from the queue. */}
+                  <div className="mt-2 pt-2 border-t flex justify-end gap-4 text-xs text-slate-400">
+                    <button onClick={() => resolveFlag(f._id, 'resolved')} className="hover:text-green-600">Mark handled</button>
+                    <button onClick={() => resolveFlag(f._id, 'dismissed')} className="hover:text-slate-600">Dismiss (no action)</button>
                   </div>
                 </div>
               ))}
