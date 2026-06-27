@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './auth';
 import Layout from './pages/Layout';
 import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
 import Community from './pages/Community';
 import Admin from './pages/Admin';
 import { Toaster } from '@/components/ui/sonner';
@@ -16,7 +17,8 @@ export default function App() {
     <Toaster richColors />
     <Layout>
       <Routes>
-        <Route path="/" element={<Navigate to="/community" />} />
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/community/*" element={<Community />} />
         {/* legacy redirects */}
         <Route path="/concerns/*" element={<Navigate to="/community/concerns" replace />} />

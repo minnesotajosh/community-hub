@@ -120,6 +120,23 @@ router.delete('/:id', requireRank('hub_admin'), async (req, res) => {
   res.json({ ok: true });
 });
 
+// Ban / unban a user — mod/admin. Cannot ban a peer or more senior user.
+router.put('/:id/ban', requireRank('hub_moderator'), async (req, res) => {
+  const { banned, reason } = req.body;
+  const target = await User.findById(req.params.id);
+  if (!target) return res.status(404).json({ error: 'Not found' });
+  if (!isGlobal(req.user) && !canAccessCommunity(req.user, target.community))
+    return res.status(403).json({ error: 'Forbidden' });
+  if (RANK[target.role] >= RANK[req.user.role])
+    return res.status(403).json({ error: 'Cannot ban a peer or senior' });
+  target.banned = !!banned;
+  target.bannedAt = banned ? new Date() : null;
+  target.bannedBy = banned ? req.user._id : null;
+  target.banReason = banned ? (reason || '') : '';
+  await target.save();
+  res.json({ user: target });
+});
+
 // Update own profile
 router.put('/me/profile', async (req, res) => {
   const { name, bio, profileImage } = req.body;

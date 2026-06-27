@@ -13,6 +13,10 @@ const userSchema = new mongoose.Schema(
     profileImage: { type: String, default: '' },
     city: { type: mongoose.Schema.Types.ObjectId, ref: 'City', default: null },
     community: { type: mongoose.Schema.Types.ObjectId, ref: 'Community', default: null },
+    banned: { type: Boolean, default: false },
+    bannedAt: { type: Date, default: null },
+    bannedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    banReason: { type: String, default: '' },
   },
   { timestamps: true }
 );

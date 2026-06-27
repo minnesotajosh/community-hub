@@ -22,6 +22,9 @@ export interface User {
   profileImage?: string;
   city?: Ref | null;
   community?: Ref | null;
+  banned?: boolean;
+  bannedAt?: string | null;
+  banReason?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -66,6 +69,8 @@ export interface Comment {
   author?: User | null;
   body: string;
   stars: string[];
+  hidden?: boolean;
+  hiddenAt?: string | null;
   createdAt: string;
   updatedAt?: string;
 }
@@ -115,6 +120,38 @@ export interface UserProfile {
   concerns: Array<Pick<Concern, '_id' | 'title' | 'status' | 'tag' | 'createdAt' | 'closed'>>;
   comments: ProfileComment[];
   isSelf: boolean;
+}
+
+export type FlagTarget = 'concern' | 'comment' | 'user';
+export type FlagStatus = 'open' | 'resolved' | 'dismissed';
+
+export interface Flag {
+  _id: string;
+  reporter?: Pick<User, '_id' | 'name' | 'role'> | null;
+  targetType: FlagTarget;
+  reason: string;
+  status: FlagStatus;
+  concern?: { _id: string; title: string } | null;
+  forum?: { _id: string; title: string } | null;
+  commentId?: string | null;
+  targetUser?: Pick<User, '_id' | 'name' | 'role' | 'banned'> | null;
+  createdAt: string;
+}
+
+export interface DashboardData {
+  role: Role;
+  unreadNotifications: number;
+  myConcerns: Array<Pick<Concern, '_id' | 'title' | 'status' | 'closed' | 'createdAt'> & { forum?: string | null }>;
+  myConcernCount: number;
+  invitedForums: Array<Pick<Forum, '_id' | 'title' | 'tag' | 'status'>>;
+  staff?: {
+    pendingConcerns: Array<Pick<Concern, '_id' | 'title' | 'tag' | 'createdAt'> & { author?: Pick<User, '_id' | 'name'> | null }>;
+    pendingCount: number;
+    openFlags: number;
+    memberCount: number;
+    openForums: number;
+    activeConcerns: number;
+  };
 }
 
 /** Sort direction + key used by the shared table tools. */

@@ -36,7 +36,14 @@ router.get('/:id', async (req, res) => {
   if (!forum) return res.status(404).json({ error: 'Not found' });
   if (!canAccessCommunity(req.user, forum.community))
     return res.status(403).json({ error: 'Forbidden' });
-  res.json({ forum, canComment: canComment(req.user, forum) });
+  // Strip the body of hidden comments for everyone except staff and the author.
+  const out = forum.toJSON();
+  out.comments = out.comments.map((c) => {
+    if (c.hidden && !isStaff(req.user) && String(c.author?._id) !== String(req.user._id))
+      return { ...c, body: '' };
+    return c;
+  });
+  res.json({ forum: out, canComment: canComment(req.user, forum) });
 });
 
 // Create forum — staff (mod/admin)
@@ -194,6 +201,22 @@ router.post('/:id/comments/:commentId/star', async (req, res) => {
     : [...comment.stars, req.user._id];
   await forum.save();
   res.json({ stars: comment.stars.length, starred: !has });
+});
+
+// Hide / unhide a comment — staff (for offensive content).
+router.put('/:id/comments/:commentId/hide', requireRank('hub_moderator'), async (req, res) => {
+  const { hidden } = req.body;
+  const forum = await Forum.findById(req.params.id);
+  if (!forum) return res.status(404).json({ error: 'Not found' });
+  if (!canAccessCommunity(req.user, forum.community))
+    return res.status(403).json({ error: 'Forbidden' });
+  const comment = forum.comments.id(req.params.commentId);
+  if (!comment) return res.status(404).json({ error: 'Comment not found' });
+  comment.hidden = !!hidden;
+  comment.hiddenBy = hidden ? req.user._id : null;
+  comment.hiddenAt = hidden ? new Date() : null;
+  await forum.save();
+  res.json({ ok: true });
 });
 
 // Close forum with resolution summary — staff

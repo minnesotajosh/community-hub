@@ -25,6 +25,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       <header className="bg-white border-b sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center gap-2">
           <Link to="/" className="font-bold text-brand-700 text-lg mr-4">Civic Hub</Link>
+          {navItem('/dashboard', 'Dashboard')}
           {navItem('/community', 'Community')}
           {isStaff(user) && navItem('/admin', isGlobal(user) ? 'Admin' : 'Manage')}
           <div className="ml-auto flex items-center gap-1">

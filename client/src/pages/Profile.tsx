@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import api, { ROLE_LABELS } from '../api';
+import api, { ROLE_LABELS, isStaff } from '../api';
+import { useAuth } from '../auth';
 import { Avatar, Tag, StatusBadge, Button } from '../components/common';
+import FlagButton from '../components/FlagButton';
 import type { UserProfile } from '../types';
 
 // Strip HTML tags for a plain-text comment preview.
@@ -12,21 +14,26 @@ function preview(html: string, max = 100): string {
 
 export default function Profile() {
   const { id } = useParams();
+  const { user: me } = useAuth();
   const [data, setData] = useState<UserProfile | null>(null);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    setData(null);
-    setError('');
+  const load = () =>
     api.get<UserProfile>(`/users/${id}/profile`)
       .then((r) => setData(r.data))
       .catch((e) => setError(e.response?.data?.error || 'Could not load profile'));
-  }, [id]);
+  useEffect(() => { setData(null); setError(''); load(); }, [id]);
+
+  const toggleBan = async (banned: boolean) => {
+    await api.put(`/users/${id}/ban`, { banned, reason: banned ? 'Violation of community guidelines' : '' });
+    load();
+  };
 
   if (error) return <div className="text-sm text-red-600">{error}</div>;
   if (!data) return <div className="text-sm text-slate-400">Loading…</div>;
 
   const { user, concerns, comments, isSelf } = data;
+  const staff = isStaff(me);
 
   return (
     <div className="space-y-6">
@@ -44,12 +51,24 @@ export default function Profile() {
                 {ROLE_LABELS[user.role]}
               </span>
             )}
+            {user.banned && (
+              <span className="text-xs font-medium text-red-700 bg-red-100 rounded-full px-2 py-0.5">Banned</span>
+            )}
           </div>
           <div className="text-sm text-slate-500 mt-0.5">
             {user.city?.name}
             {user.community ? ` · ${user.community.name}` : ''}
           </div>
           {user.bio && <p className="text-sm text-slate-600 mt-2">{user.bio}</p>}
+          {!isSelf && (
+            <div className="mt-3 flex items-center gap-3">
+              <FlagButton targetType="user" userId={user._id} label="Flag this account" />
+              {staff && (user.banned
+                ? <Button size="sm" variant="outline" onClick={() => toggleBan(false)}>Unban</Button>
+                : <Button size="sm" variant="destructive" onClick={() => toggleBan(true)}>Ban user</Button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

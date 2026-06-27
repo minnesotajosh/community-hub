@@ -4,6 +4,7 @@ import api, { isStaff } from '../api';
 import { useAuth } from '../auth';
 import { Tag, StatusBadge, Rich, Avatar, Button, SelectField, Label, Checkbox } from '../components/common';
 import RichEditor from '../components/RichEditor';
+import FlagButton from '../components/FlagButton';
 import type { Forum, Concern, User } from '../types';
 
 export default function ForumDetail() {
@@ -56,6 +57,7 @@ export default function ForumDetail() {
   const invite = async (uid: string) => { await api.post(`/forums/${id}/invite`, { userIds: [uid] }); load(); };
   const link = async (cid: string) => { await api.post(`/forums/${id}/link`, { concernId: cid }); load(); };
   const unlink = async (cid: string) => { await api.delete(`/forums/${id}/link/${cid}`); load(); };
+  const hideComment = async (cid: string, hidden: boolean) => { await api.put(`/forums/${id}/comments/${cid}/hide`, { hidden }); load(); };
   const closeForum = async () => {
     await api.put(`/forums/${id}/close`, { resolutionSummary: summary, closeLinkedConcerns: closeLinked });
     setCloseMode(false); load();
@@ -199,13 +201,24 @@ export default function ForumDetail() {
                       <Button variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
                     </div>
                   </div>
+                ) : cm.hidden && !staff && !mine ? (
+                  <div className="mt-2 text-sm italic text-slate-400">This comment was hidden by a moderator.</div>
                 ) : (
-                  <div className="mt-2"><Rich html={cm.body} /></div>
+                  <div className="mt-2">
+                    {cm.hidden && (
+                      <span className="inline-block mb-1 text-xs font-medium text-red-600 bg-red-50 rounded px-1.5 py-0.5">
+                        Hidden by moderator
+                      </span>
+                    )}
+                    <Rich html={cm.body} />
+                  </div>
                 )}
-                {(mine || staff) && editing !== cm._id && (
+                {editing !== cm._id && (
                   <div className="mt-2 flex gap-3 text-xs text-slate-400">
                     {mine && <button onClick={() => { setEditing(cm._id); setEditBody(cm.body); }} className="hover:text-brand-600">Edit</button>}
-                    <button onClick={() => delComment(cm._id)} className="hover:text-red-600">Delete</button>
+                    {(mine || staff) && <button onClick={() => delComment(cm._id)} className="hover:text-red-600">Delete</button>}
+                    {staff && <button onClick={() => hideComment(cm._id, !cm.hidden)} className="hover:text-amber-600">{cm.hidden ? 'Unhide' : 'Hide'}</button>}
+                    {!mine && <FlagButton targetType="comment" forumId={forum._id} commentId={cm._id} />}
                   </div>
                 )}
               </div>

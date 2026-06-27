@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import api, { isStaff } from '../api';
 import { useAuth } from '../auth';
 import { Tag, StatusBadge, Rich, Avatar, Button, SelectField, Input } from '../components/common';
+import FlagButton from '../components/FlagButton';
 import type { Concern, ConcernStatus, Forum } from '../types';
 
 // Inner concern view, used both as a full page and inside a modal.
@@ -87,6 +88,10 @@ export function ConcernView({ id, onNotFound, onChanged }: {
       </div>
 
       <div className="mt-4 border-t pt-4"><Rich html={c.description} /></div>
+
+      {c.author?._id !== user?._id && (
+        <div className="mt-3"><FlagButton targetType="concern" concernId={c._id} label="Flag this concern" /></div>
+      )}
 
       {c.forum && (
         <div className="mt-4 bg-brand-50 rounded-lg p-3 text-sm flex items-center justify-between gap-2">

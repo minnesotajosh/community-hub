@@ -6,6 +6,9 @@ const commentSchema = new mongoose.Schema(
     author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     body: { type: String, default: '' },
     stars: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    hidden: { type: Boolean, default: false },
+    hiddenBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    hiddenAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

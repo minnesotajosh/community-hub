@@ -17,6 +17,7 @@ export async function authRequired(req, res, next) {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(payload.id);
     if (!user) return res.status(401).json({ error: 'Invalid token' });
+    if (user.banned) return res.status(403).json({ error: 'This account has been banned.' });
     req.user = user;
     next();
   } catch {

@@ -9,6 +9,8 @@ import userRoutes from './routes/users.js';
 import concernRoutes from './routes/concerns.js';
 import forumRoutes from './routes/forums.js';
 import notificationRoutes from './routes/notifications.js';
+import flagRoutes from './routes/flags.js';
+import dashboardRoutes from './routes/dashboard.js';
 
 const app = express();
 app.use(cors());
@@ -21,6 +23,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/concerns', concernRoutes);
 app.use('/api/forums', forumRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/flags', flagRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, _req, res, _next) => {

@@ -11,6 +11,7 @@ router.post('/login', async (req, res) => {
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
   const ok = await user.checkPassword(password);
   if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
+  if (user.banned) return res.status(403).json({ error: 'This account has been banned.' });
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
   res.json({ token, user });
 });

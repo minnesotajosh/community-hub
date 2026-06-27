@@ -7,6 +7,7 @@ import City from './models/City.js';
 import Concern from './models/Concern.js';
 import Forum from './models/Forum.js';
 import Notification from './models/Notification.js';
+import Flag from './models/Flag.js';
 
 const PW = 'test';
 
@@ -28,6 +29,7 @@ async function run() {
     Concern.deleteMany({}),
     Forum.deleteMany({}),
     Notification.deleteMany({}),
+    Flag.deleteMany({}),
   ]);
 
   // --- Communities & cities ---
@@ -240,6 +242,26 @@ async function run() {
       read: false, createdAt: minsAgo(160), updatedAt: minsAgo(160) },
   ]);
 
+  // --- Flags (open moderation queue items) ---
+  await Flag.insertMany([
+    // A Riverdale comment reported as offensive.
+    { reporter: rdMember2._id, targetType: 'comment', forum: f1._id, commentId: f1.comments[1]._id,
+      reason: 'Feels dismissive / borderline rude toward residents.', community: riverdale._id, status: 'open' },
+    // A Riverdale user account reported.
+    { reporter: rdMember._id, targetType: 'user', targetUser: rdMember3._id,
+      reason: 'Suspected spam — posting promotional links.', community: riverdale._id, status: 'open' },
+    // A Riverdale concern reported as off-topic.
+    { reporter: rdMember2._id, targetType: 'concern', concern: c4._id,
+      reason: 'Duplicate of an existing tax thread.', community: riverdale._id, status: 'open' },
+    // A Summit comment reported.
+    { reporter: smMember2._id, targetType: 'comment', forum: f2._id, commentId: f2.comments[1]._id,
+      reason: 'Off-topic self-promotion.', community: summit._id, status: 'open' },
+    // An already-resolved flag (history).
+    { reporter: rdMember3._id, targetType: 'user', targetUser: rdMember2._id,
+      reason: 'Heated argument in comments.', community: riverdale._id, status: 'dismissed',
+      resolvedBy: rdMod._id, resolvedAt: new Date() },
+  ]);
+
   console.log('\nSeed complete!');
   console.log('Communities:', await Community.countDocuments());
   console.log('Cities:', await City.countDocuments());
@@ -247,6 +269,7 @@ async function run() {
   console.log('Concerns:', await Concern.countDocuments());
   console.log('Forums:', await Forum.countDocuments());
   console.log('Notifications:', await Notification.countDocuments());
+  console.log('Flags:', await Flag.countDocuments());
   console.log('\nLogin accounts (password "test"):');
   console.log('  topadmin@test.com    (Top Level Admin)');
   console.log('  iacadmin@test.com    (IAC Board)');
