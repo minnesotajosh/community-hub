@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import api, { isStaff } from '../api';
 import { useAuth } from '../auth';
 import { Tag, StatusBadge, Rich, Avatar, Button, SelectField, Label, Checkbox } from '../components/common';
@@ -11,7 +11,9 @@ export default function ForumDetail() {
   const { id } = useParams();
   const { user } = useAuth();
   const nav = useNavigate();
+  const location = useLocation();
   const [forum, setForum] = useState<Forum | null>(null);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
   const [canComment, setCanComment] = useState(false);
   const [body, setBody] = useState('');
   const [editing, setEditing] = useState<string | null>(null);
@@ -36,6 +38,20 @@ export default function ForumDetail() {
       api.get<{ concerns: Concern[] }>('/concerns').then((r) => setConcerns(r.data.concerns)).catch(() => {});
     }
   }, [user]);
+
+  // When linked to a specific comment (e.g. from the moderation queue), scroll
+  // to it and briefly highlight it once the forum has loaded.
+  useEffect(() => {
+    const m = location.hash.match(/^#comment-(.+)$/);
+    if (!forum || !m) return;
+    const cid = m[1];
+    const el = document.getElementById(`comment-${cid}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setHighlightId(cid);
+    const t = setTimeout(() => setHighlightId(null), 2500);
+    return () => clearTimeout(t);
+  }, [forum, location.hash]);
 
   if (!forum || !user) return null;
   const staff = isStaff(user);
@@ -177,7 +193,8 @@ export default function ForumDetail() {
             const mine = cm.author?._id === user._id;
             const starred = cm.stars?.includes(user._id);
             return (
-              <div key={cm._id} className="bg-white rounded-xl p-4 shadow-sm">
+              <div key={cm._id} id={`comment-${cm._id}`}
+                className={`bg-white rounded-xl p-4 shadow-sm transition-shadow ${highlightId === cm._id ? 'ring-2 ring-amber-400' : ''}`}>
                 <div className="flex items-center gap-2">
                   <Avatar user={cm.author} />
                   <div className="flex-1">

@@ -17,7 +17,8 @@ function Stat({ label, value, to, accent }: { label: string; value: number | str
 
 function targetLink(f: Flag): string {
   if (f.targetType === 'concern' && f.concern) return `/community/concerns/${f.concern._id}`;
-  if (f.targetType === 'comment' && f.forum) return `/community/forums/${f.forum._id}`;
+  if (f.targetType === 'comment' && f.forum)
+    return `/community/forums/${f.forum._id}${f.commentId ? `#comment-${f.commentId}` : ''}`;
   if (f.targetType === 'user' && f.targetUser) return `/community/users/${f.targetUser._id}`;
   return '#';
 }
