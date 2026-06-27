@@ -121,6 +121,8 @@ async function run() {
       { author: rdAdmin._id, body: '<p>Welcome. Let us prioritize the Maple Ave potholes first.</p>', stars: [rdMember._id] },
       { author: rdMember._id, body: '<p>Agreed — the bike lane situation is dangerous for kids.</p>', stars: [rdAdmin._id, rdMember2._id] },
       { author: rdMember2._id, body: '<p>Can we also get a timeline on the Brookside streetlights?</p>' },
+      { author: rdMod._id, body: '<p>I have flagged both items with public works. Will post updates here.</p>', stars: [rdMember._id, rdMember2._id] },
+      { author: iacBoard._id, body: '<p>IAC is tracking this initiative as a model for other hubs. Great work.</p>' },
     ],
   });
   await Concern.updateMany({ _id: { $in: [c1._id, c2._id] } }, { status: 'active', forum: f1._id });
@@ -135,6 +137,7 @@ async function run() {
     comments: [
       { author: smMod._id, body: '<p>Kicking off the working group. Volunteers welcome.</p>' },
       { author: smMember._id, body: '<p>I can organize a trail repair weekend.</p>', stars: [smMod._id] },
+      { author: smAdmin._id, body: '<p>The hub can cover materials for the trail repair. Coordinate with me on budget.</p>', stars: [smMember._id] },
     ],
   });
   await Concern.updateMany({ _id: { $in: [s1._id] } }, { status: 'active', forum: f2._id });
@@ -145,7 +148,10 @@ async function run() {
     description: '<p>Planning for downtown holiday lighting.</p>',
     author: rdMod._id, community: riverdale._id,
     invitedUsers: [rdMember3._id],
-    comments: [{ author: rdMember3._id, body: '<p>Lights look great this year, thanks!</p>' }],
+    comments: [
+      { author: rdMember3._id, body: '<p>Lights look great this year, thanks!</p>' },
+      { author: topAdmin._id, body: '<p>Nicely run from start to finish — archiving this as a reference for other hubs.</p>', stars: [rdMember3._id] },
+    ],
     status: 'closed',
     resolutionSummary: '<p>Lighting installed across both downtown districts. Budget came in under estimate. Next step: schedule January takedown.</p>',
     closedAt: new Date(),
