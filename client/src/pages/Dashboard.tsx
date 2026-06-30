@@ -1,18 +1,27 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import api, { isStaff } from '../api';
+import api, { isStaff, isGlobal } from '../api';
 import { useAuth } from '../auth';
 import { StatusBadge, Tag, Button } from '../components/common';
 import type { DashboardData, Flag } from '../types';
 
-function Stat({ label, value, to, accent }: { label: string; value: number | string; to?: string; accent?: boolean }) {
+function scrollToId(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function Stat({ label, value, to, onClick, accent }: {
+  label: string; value: number | string; to?: string; onClick?: () => void; accent?: boolean;
+}) {
+  const clickable = !!(to || onClick);
   const inner = (
-    <div className={`rounded-xl border p-4 ${accent ? 'bg-red-50 border-red-200' : 'bg-white'}`}>
+    <div className={`rounded-xl border p-4 h-full ${accent ? 'bg-red-50 border-red-200' : 'bg-white'} ${clickable ? 'hover:border-brand-300' : ''}`}>
       <div className={`text-2xl font-bold ${accent ? 'text-red-600' : 'text-slate-800'}`}>{value}</div>
       <div className="text-xs text-slate-500 mt-1">{label}</div>
     </div>
   );
-  return to ? <Link to={to} className="block hover:shadow-sm transition-shadow">{inner}</Link> : inner;
+  if (to) return <Link to={to} className="block hover:shadow-sm transition-shadow">{inner}</Link>;
+  if (onClick) return <button onClick={onClick} className="block w-full text-left hover:shadow-sm transition-shadow">{inner}</button>;
+  return inner;
 }
 
 function targetLink(f: Flag): string {
@@ -69,17 +78,19 @@ export default function Dashboard() {
         <Stat label="Unread notifications" value={data.unreadNotifications} to="/community/notifications" />
         <Stat label="My concerns" value={data.myConcernCount} to="/community/concerns" />
         {staff && data.staff && <>
-          <Stat label="Pending review" value={data.staff.pendingCount} accent={data.staff.pendingCount > 0} />
-          <Stat label="Open flags" value={data.staff.openFlags} accent={data.staff.openFlags > 0} />
-          <Stat label="Active concerns" value={data.staff.activeConcerns} />
+          <Stat label="Pending review" value={data.staff.pendingCount} accent={data.staff.pendingCount > 0}
+            onClick={() => scrollToId('pending-concerns')} />
+          <Stat label="Open flags" value={data.staff.openFlags} accent={data.staff.openFlags > 0}
+            onClick={() => scrollToId('moderation-queue')} />
+          <Stat label="Active concerns" value={data.staff.activeConcerns} to="/community/concerns" />
           <Stat label="Open forums" value={data.staff.openForums} to="/community/forums" />
-          <Stat label="Members" value={data.staff.memberCount} />
+          <Stat label="Members" value={data.staff.memberCount} to={isGlobal(user) ? '/admin/users' : '/admin'} />
         </>}
       </div>
 
       {/* Staff: moderation queue */}
       {staff && (
-        <section>
+        <section id="moderation-queue" className="scroll-mt-20">
           <h2 className="text-sm font-semibold text-slate-700 mb-2">Moderation queue ({flags.length})</h2>
           {flags.length === 0 ? (
             <p className="text-sm text-slate-400">No open flags. 🎉</p>
@@ -119,7 +130,7 @@ export default function Dashboard() {
 
       {/* Staff: pending concerns */}
       {staff && data.staff && data.staff.pendingConcerns.length > 0 && (
-        <section>
+        <section id="pending-concerns" className="scroll-mt-20">
           <h2 className="text-sm font-semibold text-slate-700 mb-2">Concerns awaiting review</h2>
           <div className="space-y-2">
             {data.staff.pendingConcerns.map((c) => (
