@@ -5,7 +5,9 @@ import { useAuth } from '../auth';
 import { Button, Modal, Avatar, Input, Textarea, SelectField } from '../components/common';
 import { useTableControls, TableToolbar, DataTable, TableCard, type ColumnDef, type ToolbarFilter } from '../components/DataTable';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import type { Community, User, Role } from '../types';
+import ModerationQueue from '../components/ModerationQueue';
+import { Tag } from '../components/common';
+import type { Community, User, Role, DashboardData } from '../types';
 
 export default function Admin() {
   const { user } = useAuth();
@@ -21,6 +23,7 @@ export default function Admin() {
       <p className="text-sm text-slate-500 mb-4">Signed in as {ROLE_LABELS[user.role]}</p>
       <div className="flex gap-2 mb-4">
         <NavLink to="/admin/communities" className={tabClass}>Communities &amp; Cities</NavLink>
+        <NavLink to="/admin/moderation" className={tabClass}>Moderation</NavLink>
         {global && <NavLink to="/admin/users" className={tabClass}>Users</NavLink>}
       </div>
 
@@ -29,11 +32,68 @@ export default function Admin() {
         <Route path="communities" element={<CommunitiesList />} />
         <Route path="communities/:communityId" element={<CommunityDetail />} />
         <Route path="communities/:communityId/cities/:cityId" element={<CityDetail />} />
+        <Route path="moderation" element={<Moderation />} />
         {/* Cross-community user directory is global-only; others reach member profiles via their community/city. */}
         {global && <Route path="users" element={<UsersList />} />}
         <Route path="users/:memberId" element={<MemberDetail />} />
         <Route path="*" element={<Navigate to="communities" replace />} />
       </Routes>
+    </div>
+  );
+}
+
+// ---------------- moderation ----------------
+
+function ModStat({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
+  return (
+    <div className={`rounded-xl border p-4 ${accent && value > 0 ? 'bg-red-50 border-red-200' : 'bg-white'}`}>
+      <div className={`text-2xl font-bold ${accent && value > 0 ? 'text-red-600' : 'text-slate-800'}`}>{value}</div>
+      <div className="text-xs text-slate-500 mt-1">{label}</div>
+    </div>
+  );
+}
+
+function Moderation() {
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [flagCount, setFlagCount] = useState<number | null>(null);
+
+  useEffect(() => { api.get<DashboardData>('/dashboard').then((r) => setData(r.data)).catch(() => {}); }, []);
+
+  const s = data?.staff;
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <ModStat label="Open flags" value={flagCount ?? s?.openFlags ?? 0} accent />
+        <ModStat label="Pending review" value={s?.pendingCount ?? 0} accent />
+        <ModStat label="Active concerns" value={s?.activeConcerns ?? 0} />
+        <ModStat label="Open forums" value={s?.openForums ?? 0} />
+      </div>
+
+      <section>
+        <h2 className="text-sm font-semibold text-slate-700 mb-2">
+          Moderation queue{flagCount !== null ? ` (${flagCount})` : ''}
+        </h2>
+        <ModerationQueue onCount={setFlagCount} />
+      </section>
+
+      <section>
+        <h2 className="text-sm font-semibold text-slate-700 mb-2">Concerns awaiting review</h2>
+        {!s || s.pendingConcerns.length === 0 ? (
+          <p className="text-sm text-slate-400">Nothing pending review.</p>
+        ) : (
+          <div className="space-y-2">
+            {s.pendingConcerns.map((c) => (
+              <Link key={c._id} to={`/community/concerns/${c._id}`}
+                className="flex items-center gap-3 bg-white border rounded-lg px-3 py-2 hover:bg-slate-50">
+                <span className="flex-1 text-sm font-medium text-slate-700 truncate">{c.title}</span>
+                <Tag tag={c.tag} />
+                <span className="text-xs text-slate-400">{c.author?.name}</span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
